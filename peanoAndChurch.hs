@@ -22,7 +22,9 @@ substR :: ISO a b -> (b -> a)
 substR = snd
 
 liftISO2 :: ISO a b -> ISO (a -> a -> a) (b -> b -> b)
-liftISO2 = error "do liftISO2"
+liftISO2 (ab, ba) = (liftAB, liftBA)
+  where liftAB f = \b1 b2 -> ab $ f (ba b1) (ba b2)
+        liftBA f = \a1 a2 -> ba $ f (ab a1) (ab a2)
 
 -- A Natural Number is either Zero,
 -- or a Successor (1 +) of Natural Number.
@@ -73,6 +75,26 @@ data Peano = O | S Peano deriving (Show, Eq, Ord)
 -- Remember, 0 - x = 0 for all x.
 instance Nat Peano where
 
+  zero = O
+
+  successor n = S n
+
+  nat unit _ O = unit
+  nat unit convFn n = convFn n
+
+  iter acc _ O = acc
+  iter acc iterFn (S numIter) = iter (iterFn acc) (iterFn) numIter
+
+  plus O n = n
+  plus (S n) m = plus n (S m)
+
+  minus O _ = O
+  minus n O = n
+  minus (S n) (S m) = minus n m
+
+  mult a b = iter zero (+a) b
+
+  pow a b = iter (S O) (*a) b
 -- Peano is very similar to a basic data type in Haskell - List!
 -- O is like [], and S is like :: (except it lack the head part)
 -- When we want to store no information, we can use (), a empty tuple
@@ -85,11 +107,31 @@ instance Nat Peano where
 -- Dont do that. You wont learn anything.
 -- Try to use operation specific to list.
 instance Nat [()] where
+  zero = []
+
+  successor n = ():n
+
+  nat unit _ [] = unit
+  nat unit convFn n = convFn n
+
+  iter acc _ [] = acc
+  iter acc iterFn (():numIter) = iter (iterFn acc) (iterFn) numIter
+
+  plus = (++)
+
+  minus [] _ = []
+  minus n [] = n
+  minus (():n) (():m) = minus n m
+
+  mult a b = concat $ map (\_ -> b) a
+
+  pow a b = iter [()] (* a) b
 
 -- Instead of defining Nat from zero, sucessor (and get Peano),
 -- We can define it from Pattern Matching
 newtype Scott = Scott { runScott :: forall a. a -> (Scott -> a) -> a }
 instance Nat Scott where
+
   -- Other operation on Scott numeral is sort of boring,
   -- So we implement it using operation on Peano.
   -- You shouldnt do this - I had handled all the boring case for you.
