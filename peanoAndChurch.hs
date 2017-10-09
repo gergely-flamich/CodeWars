@@ -80,7 +80,7 @@ instance Nat Peano where
   successor n = S n
 
   nat unit _ O = unit
-  nat unit convFn n = convFn n
+  nat _ convFn (S n) = convFn n
 
   iter acc _ O = acc
   iter acc iterFn (S numIter) = iter (iterFn acc) (iterFn) numIter
@@ -112,7 +112,7 @@ instance Nat [()] where
   successor n = ():n
 
   nat unit _ [] = unit
-  nat unit convFn n = convFn n
+  nat _ convFn (():n) = convFn n
 
   iter acc _ [] = acc
   iter acc iterFn (():numIter) = iter (iterFn acc) (iterFn) numIter
@@ -132,6 +132,14 @@ instance Nat [()] where
 newtype Scott = Scott { runScott :: forall a. a -> (Scott -> a) -> a }
 instance Nat Scott where
 
+  zero = Scott (\x _ -> x)
+
+  successor n = Scott (\x s -> n' x s)
+    where n' = runScott n
+
+  nat unit _ f = 
+    where f' = runScott f
+
   -- Other operation on Scott numeral is sort of boring,
   -- So we implement it using operation on Peano.
   -- You shouldnt do this - I had handled all the boring case for you.
@@ -143,6 +151,23 @@ instance Nat Scott where
 -- Or from induction!
 newtype Church = Church { runChurch :: forall a. (a -> a) -> a -> a }
 instance Nat Church where
+
+  zero = Church (\_ x -> x)
+
+  successor f = Church(\s x -> s (runChurch f s x))
+
+  plus f g = Church (\s x -> f' g' s (s x))
+    where f' = runChurch f
+          g' = runChurch g
+
+  mult f g = Church (\s x -> f' (g' s) x )
+    where f' = runChurch f
+          g' = runChurch g
+
+  pow f g = Church (\s x -> (f' g') s x)
+    where f' = runChurch f
+          g' = runChurch g
+
   -- Try to implement the calculation (except minus) in the primitive way.
   -- Implement them by constructing Church explicitly.
   -- So plus should not use successor,
