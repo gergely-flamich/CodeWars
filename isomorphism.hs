@@ -78,12 +78,12 @@ isoUnMaybe :: ISO (Maybe a) (Maybe b) -> ISO a b
 -- Remember, for all valid ISO, converting and converting back
 -- Is the same as the original value.
 -- You need this to prove some case are impossible.
-isoUnMaybe (mab, mba) = (maybeUnBind mab mba, maybeUnBind mba mab)
+isoUnMaybe (mab, mba) = (maybeUnBind mab, maybeUnBind mba)
 
-maybeUnBind :: (Maybe a -> Maybe b) -> (Maybe b -> Maybe a) -> a -> b
-maybeUnBind mab mba a = case mab (Just a) of
+maybeUnBind :: (Maybe a -> Maybe b) -> a -> b
+maybeUnBind mab a = case mab (Just a) of
                           (Just b) -> b
-                          Nothing -> undefined :: b
+                          Nothing -> fromJust (mab Nothing)
 
 -- We cannot have
 -- isoUnEither :: ISO (Either a b) (Either c d) -> ISO a c -> ISO b d.
@@ -92,12 +92,13 @@ isoEU :: ISO (Either [()] ()) (Either [()] Void)
 isoEU = (eitherUnBindLeft, eitherUnBindRight)
 
 eitherUnBindLeft :: Either [()] () -> Either [()] Void
-eitherUnBindLeft (Left xs) = Left xs
-eitherUnBindLeft (Right ())= Right $ absurd (undefined :: Void)
+eitherUnBindLeft (Left (():xs)) = Left xs
+eitherUnBindLeft (Right ())= Left []
 
 eitherUnBindRight :: Either [()] Void -> Either [()] ()
-eitherUnBindRight (Left xs) = Left xs
-eitherUnBindRight (Right x) = (absurd x) :: (Either [()] ())
+eitherUnBindRight (Left []) = Right ()
+eitherUnBindRight (Left xs) = Left $ ():xs
+eitherUnBindRight (Right x) = Left [()]
 
 -- where (), the empty tuple, has 1 value, and Void has 0 value
 -- If we have isoUnEither,
