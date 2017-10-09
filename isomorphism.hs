@@ -83,7 +83,9 @@ isoUnMaybe (mab, mba) = (maybeUnBind mab mba, maybeUnBind mba mab)
 maybeUnBind :: (Maybe a -> Maybe b) -> (Maybe b -> Maybe a) -> a -> b
 maybeUnBind mab mba a = case mab (Just a) of
                           (Just b) -> b
-                          Nothing -> undefined :: b
+                          Nothing -> let (Just x) = mab . mba . mab $ (Just a)
+                                     in x
+
 
 -- We cannot have
 -- isoUnEither :: ISO (Either a b) (Either c d) -> ISO a c -> ISO b d.
