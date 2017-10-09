@@ -134,12 +134,11 @@ instance Nat Scott where
 
   zero = Scott (\x _ -> x)
 
-  successor n = Scott (\x s -> n' x s)
-    where n' = runScott n
+  successor n = Scott (\_ s -> s n )
 
-  nat unit _ f = 
-    where f' = runScott f
+  nat unit convFn (Scott n) = n unit (convFn)
 
+  iter acc iterFn (Scott n) = n acc (\m -> iter (iterFn acc) iterFn m)
   -- Other operation on Scott numeral is sort of boring,
   -- So we implement it using operation on Peano.
   -- You shouldnt do this - I had handled all the boring case for you.
@@ -154,22 +153,24 @@ instance Nat Church where
 
   zero = Church (\_ x -> x)
 
-  successor f = Church(\s x -> s (runChurch f s x))
+  successor (Church f) = Church(\s x -> s $ f s x)
 
-  plus f g = Church (\s x -> f' g' s (s x))
-    where f' = runChurch f
-          g' = runChurch g
+  nat unit convFn cn@(Church n) = n (\_ -> convFn $ predec cn) unit
 
-  mult f g = Church (\s x -> f' (g' s) x )
-    where f' = runChurch f
-          g' = runChurch g
+  iter acc iterFn (Church n) = n (\accum -> iterFn accum) acc
 
-  pow f g = Church (\s x -> (f' g') s x)
-    where f' = runChurch f
-          g' = runChurch g
+  plus (Church f) (Church g) = Church (\s x -> f s (g s x))
+
+  mult (Church f) (Church g) = Church (\s x -> f (g s) x )
+
+  pow (Church f) (Church g) = Church (\s x -> (g f) s x)
+
+  minus f g = iter f (predec) g
 
   -- Try to implement the calculation (except minus) in the primitive way.
   -- Implement them by constructing Church explicitly.
   -- So plus should not use successor,
   -- mult should not use plus,
   -- exp should not use mult.
+predec :: Church -> Church
+predec (Church n) = Church (\f x -> n (\g h -> h (g f)) (\_ -> x) (\u -> u))
